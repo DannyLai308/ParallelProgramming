@@ -3,7 +3,7 @@ import random
 import threading
 import time
 
-class fork:
+class Fork:
     def __init__(self):
         self.is_Used = False
 
@@ -17,7 +17,7 @@ class fork:
         self.is_Used = False
 
 
-class philosophers(threading.Thread):
+class Philosopher(threading.Thread):
     def __init__(self, philo_id, left_fork, right_fork):
         super().__init__()
         self.philo_id = philo_id
@@ -25,14 +25,17 @@ class philosophers(threading.Thread):
         self.right_fork = right_fork
         self.random = random.Random()
         self.is_deadlock = False  
+        self.has_eaten = False
+        self.meals = 0
        
 
     # Main function to simulate the dining philosophers problem. Contains the main loop
     # where philosophers keeps altering between thinking and eating
-    def simulate(self):
+    def run(self):
         while not self.is_deadlock:
             self.philo_think() # Starts the simulation with the philosopher thinking
 
+            print(f"Philosopher # {self.philo_id} wants to eat")
             if self.left_fork.take_fork():
                 # Taking left fork for a random length of time
                 take_left_fork = self.random.randint(1, 100)
@@ -45,6 +48,7 @@ class philosophers(threading.Thread):
                     take_right_fork = self.random.randint(1, 100)
                     time.sleep(take_right_fork/1000)
                     self.philo_eat()
+                    self.meals += 1
 
                     # Putting down one fork at a time after eating, at a random length of time
                     putDown_left_fork = self.random.randint(1, 100)
@@ -57,16 +61,22 @@ class philosophers(threading.Thread):
                     self.right_fork.put_fork_down()
                     print(f"Philosopher # {self.philo_id} putting down right fork")
                 
-                # If philosopher cannot take either left or right fork, it is a deadlock
                 else:
                     print(f"Philosopher # {self.philo_id} couldn't take right fork")
-                    self.is_deadlock = True
+                    self.has_eaten = False
+                    # Put down left fork after failing to take right fork
+                    self.left_fork.put_fork_down()
+                    print(f"Philosopher # {self.philo_id} putting down left fork ")
+                    
             else:
+                self.has_eaten = False
                 print(f"Philosopher # {self.philo_id} couldn't take left fork")
+
+            # Detect deadlock 
+            if  not self.is_deadlock and not self.left_fork.is_Used and not self.right_fork.is_Used and not self.has_eaten:
                 self.is_deadlock = True
-            # Detect deadlock when the philosopher cannot eat due to not having both forks
-            if  self.is_deadlock:
                 print(f"Philosopher # {self.philo_id} reached deadlock")
+
     
     def philo_think(self):
         # The philosopher thinks for a random length of time
@@ -76,9 +86,39 @@ class philosophers(threading.Thread):
 
     def philo_eat(self):
         # The philosopher eats for a random length of time
+        self.has_eaten = True
         eat_time = self.random.randint(1, 100)
         print(f"Philosopher # {self.philo_id} is eating for {eat_time}ms")
         time.sleep(eat_time/1000)
 
     
+def dining_simulation(number_Of_philo):
+    forks = [Fork() for _ in range(number_Of_philo)]
+    philosophers = [Philosopher(index + 1, forks[index], forks[(index + 1) % number_Of_philo]) for index in range(number_Of_philo)]
 
+    # Starts all threads for philosophers and waits for them to finish
+    for philo in philosophers:
+        philo.start()
+    for philo in philosophers:
+        philo.join()
+
+    print("Deadlock occured for all philosophers")
+
+    print("# of philosophers    | Percentage of meals               | Total number of meals before deadlock")
+    total_meals = 0
+    for philo in philosophers:
+        total_meals += philo.meals
+    print()
+    print(f"{number_Of_philo}                   | ", end=(" "))
+    for philo in philosophers:    
+        meals_percentage = (philo.meals / total_meals) * 100 if total_meals > 0 else 0
+        print(f"{meals_percentage:.1f}", end=", ")
+    print(f"                        | {total_meals}")
+
+if __name__ == "__main__":
+    # if len(sys.argv) < 2:
+    #     print("Error: Please specify the number of philosophers (at least 2)")
+    #     exit(1)
+
+    number_Of_philo = 3
+    dining_simulation(number_Of_philo)
