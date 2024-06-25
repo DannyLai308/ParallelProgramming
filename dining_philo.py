@@ -33,7 +33,6 @@ class Philosopher(threading.Thread):
 
       if not self.right_fork.acquire(timeout=0.6):  # Acquire right fork with timeout to wait for potential release of fork from neighbor philosopher
         print(f"Philosopher # {self.philo_id} couldn't pick up right fork within timeout")
-        #self.left_fork.release()  # Put down left fork if right fork is not available
         break  # Break out of loop if can't get right fork within timeout, since it means the neighbor philosopher is holding to the right fork
 
       time.sleep(random.randint(1, 100)/1000) # Random length of time to pick up right fork
